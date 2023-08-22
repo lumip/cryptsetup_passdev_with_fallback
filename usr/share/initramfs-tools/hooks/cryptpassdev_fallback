@@ -1,0 +1,42 @@
+#!/bin/sh
+
+set -e
+
+PREREQ="cryptroot"
+
+prereqs()
+{
+        echo "$PREREQ"
+}
+
+case "$1" in
+    prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+# Hooks for adding passdev and filesystem modules to the initramfs when the passdev_with_fallback
+# keyscript is used
+
+# Check whether the passdev_with_fallback script has been included and abort if not
+if [ ! -x "$DESTDIR/lib/cryptsetup/scripts/passdev_with_fallback" ]; then
+        exit 0
+fi
+
+# We need passdev (askpass is already included)
+if [ ! -x "$DESTDIR/lib/cryptsetup/scripts/passdev" ]; then
+        copy_exec /lib/cryptsetup/scripts/passdev
+fi
+
+# The filesystem type of the removable device is probed at boot-time, so
+# we add a generous list of filesystems to include. This also helps with
+# recovery situation as including e.g. the vfat module might help a user
+# who needs to create a new cryptkey (using a backup of a keyfile) on
+# a windows-machine for example.
+
+# This list needs to be kept in sync with the one defined in passdev.c
+manual_add_modules ext4 ext3 ext2 vfat btrfs reiserfs xfs jfs ntfs iso9660 udf
+exit 0
